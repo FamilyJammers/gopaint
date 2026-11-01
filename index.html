@@ -46,18 +46,40 @@
   #legend div{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:var(--r-s);padding:6px 10px;background:#fff}
   #legend i{width:26px;height:26px;border-radius:7px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2);flex:none}
   #pOut,#pLeg{display:none}
+  #prog{position:fixed;left:50%;transform:translateX(-50%);top:max(10px,env(safe-area-inset-top));width:min(560px,calc(100vw - 24px));z-index:50;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:12px 16px;font-weight:600}
+  #prog[hidden]{display:none}
+  #prog progress{display:block;width:100%;height:10px;margin-top:8px;accent-color:var(--accent)}
+  #prog.err{border-color:var(--accent);color:var(--accent-d)}
+  #prog.err progress{display:none}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .sw2{display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer}
+  .sw2 input{width:22px;height:22px;accent-color:var(--accent);margin:0}
   .pair canvas{cursor:zoom-in}
   .hint{margin:8px 0 0;font-size:.85rem;color:var(--muted)}
   #vw{position:fixed;inset:0;width:100dvw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#fff;overflow:hidden}
   #vw::backdrop{background:#fff}
-  #vc{position:fixed;left:50%;top:50%;width:100dvw;height:100dvh;object-fit:contain;border:0;border-radius:0;transform:translate(-50%,-50%);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-  #vw.rot #vc{width:100dvh;height:100dvw;transform:translate(-50%,-50%) rotate(90deg)}
+  #vc{position:fixed;left:50%;top:50%;width:100dvw;height:100dvh;object-fit:contain;border:0;border-radius:0;transform:translate(-50%,-50%) rotate(calc(var(--a,0) * 90deg));touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  #vw[data-r="1"] #vc,#vw[data-r="3"] #vc{width:100dvh;height:100dvw}
   #vbar{position:fixed;left:0;right:0;top:0;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 10px max(12px,env(safe-area-inset-left));background:rgba(255,255,255,.94);border-bottom:1px solid var(--line);box-shadow:var(--shadow);transition:opacity .25s,visibility .25s}
   #vbar.hide{opacity:0;visibility:hidden}
   #vbar button{min-height:48px;min-width:48px}
   #vbar label{display:flex;align-items:center;gap:10px;font-weight:600;flex:1 1 220px}
   #vbar input{min-height:44px}
   #vbar [hidden]{display:none}
+  #cw{position:fixed;inset:0;width:100dvw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#1d1b19;overflow:hidden}
+  #cw[open]{display:flex;flex-direction:column}
+  #cw::backdrop{background:#1d1b19}
+  #cstage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:max(24px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) 24px max(24px,env(safe-area-inset-left))}
+  #cwrap{position:relative;line-height:0;touch-action:none;user-select:none;-webkit-user-select:none}
+  #cimg{display:block;max-width:calc(100dvw - 48px - env(safe-area-inset-left) - env(safe-area-inset-right));max-height:calc(100dvh - 148px - env(safe-area-inset-top) - env(safe-area-inset-bottom));-webkit-user-drag:none}
+  #cbox{position:absolute;border:2px solid #fff;box-shadow:0 0 0 100vmax rgba(0,0,0,.55);cursor:move;touch-action:none}
+  #cbox:focus-visible{outline:3px solid #ffb27a;outline-offset:3px}
+  .ch{position:absolute;width:44px;height:44px;touch-action:none}
+  .ch::after{content:"";position:absolute;left:13px;top:13px;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--accent)}
+  .ch[data-c=nw]{left:-24px;top:-24px;cursor:nwse-resize}.ch[data-c=ne]{right:-24px;top:-24px;cursor:nesw-resize}
+  .ch[data-c=sw]{left:-24px;bottom:-24px;cursor:nesw-resize}.ch[data-c=se]{right:-24px;bottom:-24px;cursor:nwse-resize}
+  #cbar{position:relative;z-index:2;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:12px max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:#fff;border-top:1px solid var(--line)}
+  #cbar button{min-height:48px}
   @media(max-width:760px){.pair{grid-template-columns:1fr}.bar .btns{width:100%}.bar .btns button{flex:1;padding:12px 8px;white-space:nowrap}}
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
   @media print{
@@ -69,6 +91,7 @@
 </style>
 </head>
 <body>
+<div id="prog" hidden><span id="pt" role="status" aria-live="polite"></span><progress id="pb" max="100"></progress></div>
 <main>
 <header>
   <div class="sw"><i style="background:#c2410c"></i><i style="background:#e8a33d"></i><i style="background:#5b8a5a"></i><i style="background:#3b78a8"></i><i style="background:#1d1b19"></i></div>
@@ -84,7 +107,8 @@
   <div class="card bar">
     <label>Colors <b id="kv"></b><input id="k" type="range" min="4" max="32"></label>
     <label>Line darkness <b id="dv">1</b><input id="dk" type="range" min="1" max="5" value="1"></label>
-    <div class="btns"><button id="dl">Download PNGs</button><button id="pr" class="sec">Print / PDF</button></div>
+    <label class="sw2"><input id="bg" type="checkbox" role="switch">Remove background</label>
+    <div class="btns"><button id="dl">Download PNGs</button><button id="cp" class="sec">Crop photo</button><button id="pr" class="sec">Print / PDF</button></div>
   </div>
   <div class="pair">
     <div class="card"><h3>Outline</h3><canvas id="outline" tabindex="0" role="button" aria-label="Open outline full screen"></canvas><p class="hint">Tap to open full screen</p></div>
@@ -93,6 +117,13 @@
   <div class="card"><h3>Colors</h3><div id="legend"></div></div>
 </div>
 </main>
+<dialog id="cw" aria-label="Crop photo">
+  <div id="cstage"><div id="cwrap"><img id="cimg" alt="Photo to crop" draggable="false">
+    <div id="cbox" tabindex="0" role="group" aria-label="Crop area. Arrow keys move it, Shift plus arrow keys resize it.">
+      <i class="ch" data-c="nw"></i><i class="ch" data-c="ne"></i><i class="ch" data-c="sw"></i><i class="ch" data-c="se"></i>
+    </div></div></div>
+  <div id="cbar"><button id="ca">Apply</button><button id="cc" class="sec">Cancel</button><button id="cr" class="sec">Reset</button></div>
+</dialog>
 <dialog id="vw" aria-label="Full screen view">
   <canvas id="vc"></canvas>
   <div id="vbar">
@@ -108,22 +139,135 @@ const $ = id => document.getElementById(id);
 let src, out, redrawOutline;  // out = {outline, preview, legend canvases}
 const LV = [[2, 85], [2, 40], [3, 0], [4, 0], [6, 0]];   // line darkness levels: edge offset (hi-res px), gray
 
+let pic, crop, picId = 0, srcKey, maskKey, maskSoft, runId = 0;   // photo, crop fractions or null; cached cleaned photo / subject mask (keyed by photo+crop); newest run
+const keyNow = () => picId + ':' + JSON.stringify(crop), STALE = {}, BGN = 320;   // STALE: thrown to abandon a superseded run; BGN: model input size
 function load(url) {
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onerror = () => alert("Couldn't load that image. For links, the site must allow it; otherwise save the image and upload it.");
-  img.onload = () => {
-    const r = Math.min(1, MAX / Math.max(img.width, img.height));
-    const c = document.createElement('canvas');
-    c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
-    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
-    g.drawImage(img, 0, 0, c.width, c.height);
-    src = g.getImageData(0, 0, c.width, c.height); bilateral(src, 3, 30);
-    $('k').value = guessK(src.data); $('result').style.display = 'block'; document.body.classList.add('has');
-    go();
-  };
+  img.onload = () => { pic = img; picId++; crop = null; srcKey = maskKey = maskSoft = null; render(true); };
   img.src = url;
 }
+const render = fresh => run('full', fresh);
+
+// --- progress bar: yields between stages so it paints (MessageChannel, so hidden tabs don't stall)
+const WT = { clean: 25, dl: 20, mask: 20, colors: 20, smooth: 15, draw: 20 };
+const LAB = { clean: 'Cleaning up photo', mask: 'Finding the subject', colors: 'Finding colours', smooth: 'Smoothing lines', draw: 'Drawing' };
+let plan = [], lastYield = 0, noteTimer, running = false;
+let lastRaf = 0;
+const tick = async () => {
+  if (!document.hidden && performance.now() - lastRaf > 250) { lastRaf = performance.now(); await Promise.race([new Promise(r => requestAnimationFrame(r)), new Promise(r => setTimeout(r, 120))]); }   // paint now and then; otherwise plain task yields
+  await new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => r(); c.port2.postMessage(0); });
+};
+function showProg(name, f, text) {   // f: 0..1, or null for indeterminate
+  if (!running) return;   // late download/worker callbacks must not revive the bar
+  const i = plan.indexOf(name), tot = plan.reduce((a, n) => a + WT[n], 0), pre = plan.slice(0, i).reduce((a, n) => a + WT[n], 0);
+  $('prog').hidden = false; $('prog').classList.remove('err');
+  const t = text || LAB[name]; if ($('pt').textContent !== t) $('pt').textContent = t;
+  if (f == null) $('pb').removeAttribute('value'); else $('pb').value = (pre + WT[name] * f) / tot * 100;
+}
+function note(msg) {
+  clearTimeout(noteTimer); $('prog').hidden = false; $('prog').classList.add('err'); $('pt').textContent = msg;
+  noteTimer = setTimeout(() => $('prog').hidden = true, 7000);
+}
+function busy(b) { running = b; $('dl').disabled = $('pr').disabled = b; if (!b) $('prog').hidden = true; }
+
+// --- optional on-device background remover (worker + self-hosted u2netp), loaded on first use
+let bgWorker, bgReady, callId = 0; const pend = new Map();
+const killWorker = () => { bgWorker && bgWorker.terminate(); bgWorker = bgReady = null; pend.forEach(p => p[1](new Error('worker'))); pend.clear(); };
+const bgCall = (msg, tr) => new Promise((res, rej) => { const id = ++callId; pend.set(id, [res, rej]); bgWorker.postMessage({ ...msg, id }, tr); });
+async function fetchBuf(url, i, st, report) {
+  const r = await fetch(url); if (!r.ok) throw new Error(url + ' ' + r.status);
+  st.tot[i] = r.headers.get('content-encoding') ? 0 : +r.headers.get('content-length') || 0;   // compressed or unknown length: no honest total
+  const rd = r.body.getReader(), parts = [];
+  for (;;) { const { done, value } = await rd.read(); if (done) break; parts.push(value); st.got[i] += value.length; report(); }
+  return new Blob(parts).arrayBuffer();
+}
+function bgInit(report) {
+  return bgReady || (bgReady = (async () => {
+    const st = { got: [0, 0], tot: [null, null] };
+    let wasm, model;
+    try { [wasm, model] = await Promise.all([fetchBuf('vendor/ort-wasm-simd.wasm', 0, st, () => report(st)), fetchBuf('vendor/u2netp.onnx', 1, st, () => report(st))]); }
+    catch (e) { bgReady = null; throw { bg: location.protocol === 'file:' ? "Background removal only works on the website, not when this page is opened as a file." : "Couldn't download the background remover. Check your connection and try again." }; }
+    try {
+      bgWorker = new Worker('bg-worker.js');
+      bgWorker.onmessage = e => { const m = e.data, p = pend.get(m.id); if (!p) return; pend.delete(m.id); m.error ? p[1](new Error(m.error)) : p[0](m.mask || true); };
+      bgWorker.onerror = killWorker;
+      await bgCall({ type: 'init', wasm, model }, [wasm, model]);
+    } catch (e) { killWorker(); throw { bg: "The background remover couldn't start on this device." }; }
+  })());
+}
+const cropRect = () => {
+  const c = crop || { x0: 0, y0: 0, x1: 1, y1: 1 }, nw = pic.naturalWidth, nh = pic.naturalHeight;
+  return [Math.round(c.x0 * nw), Math.round(c.y0 * nh), Math.max(1, Math.round((c.x1 - c.x0) * nw)), Math.max(1, Math.round((c.y1 - c.y0) * nh))];
+};
+async function findSubject(ok) {   // -> soft mask (BGN x BGN, 0..1) for the cropped photo
+  ok(); await bgInit(st => {
+    const known = st.tot.every(Boolean), mb = v => (v / 1048576).toFixed(0);
+    showProg('dl', known ? (st.got[0] + st.got[1]) / (st.tot[0] + st.tot[1]) : null, 'Downloading background remover' + (known ? `: ${mb(st.got[0] + st.got[1])} of ${mb(st.tot[0] + st.tot[1])} MB` : '…'));
+  });
+  ok(); showProg('mask', null);
+  const c = document.createElement('canvas'); c.width = c.height = BGN;
+  const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(pic, ...cropRect(), 0, 0, BGN, BGN);
+  const px = g.getImageData(0, 0, BGN, BGN).data;
+  await tick(); ok();
+  try { var soft = await bgCall({ type: 'run', img: px.buffer }, [px.buffer]); }
+  catch (e) { throw { bg: "Couldn't remove the background on this device." }; }
+  ok(); return soft;
+}
+// soft mask -> grid-sized array, 1 = background; threshold, then drop specks and small holes with the usual cleanup
+async function bgMask(soft, W, H, yf) {
+  const m = new Int32Array(W * H);
+  for (let y = 0; y < H; y++) {
+    if (!(y & 63)) await yf(y / H);
+    const fy = Math.min(BGN - 1, Math.max(0, (y + .5) * BGN / H - .5)), y0 = Math.floor(fy), y1 = Math.min(BGN - 1, y0 + 1), ty = fy - y0;
+    for (let x = 0; x < W; x++) {
+      const fx = Math.min(BGN - 1, Math.max(0, (x + .5) * BGN / W - .5)), x0 = Math.floor(fx), x1 = Math.min(BGN - 1, x0 + 1), tx = fx - x0;
+      const v = (soft[y0*BGN+x0] * (1-tx) + soft[y0*BGN+x1] * tx) * (1-ty) + (soft[y1*BGN+x0] * (1-tx) + soft[y1*BGN+x1] * tx) * ty;
+      m[y*W+x] = v < .5 ? 1 : 0;
+    }
+  }
+  await yf(1); mergeSmall(m, W, H, 2, 150); await yf(1);
+  let n = 0; for (let i = 0; i < m.length; i++) n += m[i];
+  if (n < m.length * .01 || n > m.length * .99) throw { bg: "Couldn't find a subject in this photo." };
+  return m;
+}
+
+async function run(mode, fresh, toggled) {
+  const my = ++runId, ok = () => { if (my !== runId) throw STALE; }, key = keyNow(), useBg = $('bg').checked;
+  const needClean = mode === 'full' || srcKey !== key, needMask = useBg && maskKey !== key;
+  plan = [...(needClean ? ['clean'] : []), ...(needMask ? (bgReady ? ['mask'] : ['dl', 'mask']) : []), 'colors', 'smooth', 'draw'];
+  clearTimeout(noteTimer); busy(true); lastYield = performance.now();
+  const yf = (name, lo = 0, hi = 1) => async f => { if (my === runId) showProg(name, lo + (hi - lo) * f); if (performance.now() - lastYield > 40) { await tick(); lastYield = performance.now(); } ok(); };
+  let msg;
+  try {
+    let data = src, k = +$('k').value;
+    if (needClean) {
+      showProg('clean', 0);
+      const [sx, sy, sw, sh] = cropRect(), r = Math.min(1, MAX / Math.max(sw, sh)), c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(sw * r)); c.height = Math.max(1, Math.round(sh * r));
+      const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+      g.drawImage(pic, sx, sy, sw, sh, 0, 0, c.width, c.height);
+      data = g.getImageData(0, 0, c.width, c.height); await bilateral(data, 3, 30, yf('clean'));
+      if (fresh) k = guessK(data.data);
+    }
+    const soft = useBg ? (needMask ? await findSubject(ok) : maskSoft) : null;
+    const commit = await build(data, k, soft, yf);
+    ok();
+    commit(); src = data; srcKey = key; if (needMask) { maskSoft = soft; maskKey = key; }
+    $('k').value = k; $('kv').textContent = k;
+    $('result').style.display = 'block'; document.body.classList.add('has');
+  } catch (e) {
+    if (e === STALE) return;
+    if (e && e.bg) { msg = e.bg; $('bg').checked = false; } else { console.error(e); msg = 'Something went wrong. Please try again.'; }
+  }
+  if (my !== runId) return;
+  busy(false);
+  if (msg) { note(msg); if (!toggled && !$('bg').checked && useBg) run(mode, fresh); }   // failed mask on a crop/slider run: still deliver the normal result
+}
+$('k').onchange = () => run('colors');
+$('bg').onchange = () => run('colors', false, $('bg').checked);
+
 const loadFile = f => f && f.type.startsWith('image/') && load(URL.createObjectURL(f));
 $('file').onchange = e => loadFile(e.target.files[0]);
 $('url').onchange = e => e.target.value.trim() && load(e.target.value.trim());
@@ -139,17 +283,17 @@ addEventListener('paste', e => {
   const f = [...e.clipboardData.files][0], t = e.clipboardData.getData('text').trim();
   f ? loadFile(f) : /^https?:\/\//.test(t) && load(t);
 });
-$('k').onchange = go;
 $('k').oninput = () => $('kv').textContent = $('k').value;
 
 // edge-preserving blur (2 passes): weight = spatial gaussian * colour weight looked up by summed |dRGB|
-function bilateral(img, r, sc) {
+async function bilateral(img, r, sc, yf) {
   const W = img.width, H = img.height, sp = [], lut = new Float32Array(766);
   for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) sp.push([dx, dy, Math.exp(-(dx*dx + dy*dy) / (r*r/2))]);
   for (let i = 0; i < 766; i++) lut[i] = Math.exp(-i*i / (2*sc*sc));
   for (let pass = 0; pass < 2; pass++) {
     const d = img.data, o = new Uint8ClampedArray(d.length);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    for (let y = 0; y < H; y++) { if (yf && !(y & 15)) await yf((pass + y / H) / 2);
+     for (let x = 0; x < W; x++) {
       const p = (y*W+x) * 4; let r0 = 0, g0 = 0, b0 = 0, ws = 0;
       for (const [dx, dy, w0] of sp) {
         const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
@@ -157,7 +301,7 @@ function bilateral(img, r, sc) {
         r0 += d[q] * w; g0 += d[q+1] * w; b0 += d[q+2] * w; ws += w;
       }
       o[p] = r0 / ws; o[p+1] = g0 / ws; o[p+2] = b0 / ws; o[p+3] = 255;
-    }
+    } }
     d.set(o);
   }
 }
@@ -173,13 +317,15 @@ function guessK(d) {
   return Math.max(8, Math.min(24, c));
 }
 
-function kmeans(d, k) {
+async function kmeans(d, k, bgm, yf) {   // bgm: 1 = background pixel (not clustered, gets label k)
   const n = d.length / 4, cen = [];
-  for (let i = 0; i < k; i++) { const p = (Math.random() * n | 0) * 4; cen.push([d[p], d[p+1], d[p+2]]); }
+  for (let i = 0; i < k; i++) { let q; do q = Math.random() * n | 0; while (bgm && bgm[q]); const p = q * 4; cen.push([d[p], d[p+1], d[p+2]]); }
   const lab = new Int32Array(n);
   for (let it = 0; it < 10; it++) {
+    await yf(it / 10);
     const s = cen.map(() => [0, 0, 0, 0]), step = it < 9 ? 7 : 1;   // subsample until the last pass labels everything
     for (let i = 0; i < n; i += step) {
+      if (bgm && bgm[i]) { lab[i] = k; continue; }
       let best = 0, bd = 1e9;
       for (let j = 0; j < k; j++) {
         const dr = d[i*4] - cen[j][0], dg = d[i*4+1] - cen[j][1], db = d[i*4+2] - cen[j][2];
@@ -192,9 +338,10 @@ function kmeans(d, k) {
   return [lab, cen.map(c => c.map(Math.round))];
 }
 
-function modeFilter(lab, W, H, k, r) {
+async function modeFilter(lab, W, H, k, r, yf) {
   const o = new Int32Array(lab.length), cnt = new Int32Array(k);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+  for (let y = 0; y < H; y++) { if (yf && !(y & 31)) await yf(y / H);
+   for (let x = 0; x < W; x++) {
     cnt.fill(0);
     for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
       const yy = y + dy, xx = x + dx;
@@ -202,7 +349,7 @@ function modeFilter(lab, W, H, k, r) {
     }
     let b = lab[y*W+x]; for (let j = 0; j < k; j++) if (cnt[j] > cnt[b]) b = j;
     o[y*W+x] = b;
-  }
+  } }
   return o;
 }
 
@@ -222,16 +369,16 @@ function components(lab, W, H) {
   return [comp, list];
 }
 
-function mergeSmall(lab, W, H, k) {
+function mergeSmall(lab, W, H, k, min = MIN, bg = -1) {   // bg label: never merged away, never merged into
   for (let pass = 0; pass < 2; pass++) {
     const [comp, list] = components(lab, W, H);
     for (const px of list) {
-      if (px.length >= MIN) continue;
+      if (px.length >= min || lab[px[0]] === bg) continue;
       const cnt = new Map();
       for (const p of px) {
         const x = p % W, y = p / W | 0;
         for (const q of [x > 0 ? p-1 : -1, x < W-1 ? p+1 : -1, y > 0 ? p-W : -1, y < H-1 ? p+W : -1])
-          if (q >= 0 && comp[q] !== comp[p]) cnt.set(lab[q], (cnt.get(lab[q]) || 0) + 1);
+          if (q >= 0 && comp[q] !== comp[p] && lab[q] !== bg) cnt.set(lab[q], (cnt.get(lab[q]) || 0) + 1);
       }
       let best = -1, bc = 0; for (const [l, c] of cnt) if (c > bc) { bc = c; best = l; }
       if (best >= 0) for (const p of px) lab[p] = best;
@@ -239,19 +386,20 @@ function mergeSmall(lab, W, H, k) {
   }
 }
 
-function go() {
-  $('kv').textContent = $('k').value;
-  const W = src.width, H = src.height, k = +$('k').value;
-  let [lab, cen] = kmeans(src.data, k);
+async function build(data, k, soft, yf) {   // does all the slow work, returns commit() which writes canvases/legend in one go
+  const W = data.width, H = data.height, bgm = soft && await bgMask(soft, W, H, yf('colors', 0, 0)), BG = soft ? k : -1, kk = k + 1;
+  let [lab, cen] = await kmeans(data.data, k, bgm, yf('colors'));
+  if (soft) cen.push([255, 255, 255]);   // reserved background label k: white, no number, not in the key
   // merge near-identical centres into the first kept one (no false outlines inside flat colour)
   const keep = [], map = cen.map((c, j) => { const q = keep.find(q => Math.hypot(c[0]-cen[q][0], c[1]-cen[q][1], c[2]-cen[q][2]) < MERGE); if (q === undefined) keep.push(j); return q ?? j; });
-  lab = lab.map(l => map[l]);
-  lab = modeFilter(modeFilter(lab, W, H, k, 2), W, H, k, 2);
-  mergeSmall(lab, W, H, k);
+  map[k] = k; lab = lab.map(l => map[l]);
+  lab = await modeFilter(await modeFilter(lab, W, H, kk, 2, yf('smooth', 0, .4)), W, H, kk, 2, yf('smooth', .4, .8));
+  mergeSmall(lab, W, H, kk, MIN, BG);
+  await yf('smooth', .8, 1)(0);
   const [comp, list] = components(lab, W, H);
 
   // renumber colours actually used, 1..n
-  const used = [...new Set(lab)].sort((a, b) => a - b), num = new Map(used.map((c, i) => [c, i + 1]));
+  const used = [...new Set(lab)].filter(l => l !== BG).sort((a, b) => a - b), num = new Map(used.map((c, i) => [c, i + 1]));
 
   // distance to nearest region edge, to place each number in the region's fattest spot
   const d = new Int32Array(W * H);
@@ -262,13 +410,11 @@ function go() {
   for (let p = 0; p < d.length; p++) { if (p % W) d[p] = Math.min(d[p], d[p-1] + 1); if (p >= W) d[p] = Math.min(d[p], d[p-W] + 1); }
   for (let p = d.length - 1; p >= 0; p--) { if (p % W < W-1) d[p] = Math.min(d[p], d[p+1] + 1); if (p + W < d.length) d[p] = Math.min(d[p], d[p+W] + 1); }
 
-  const o = $('outline'), pv = $('preview');
-  o.width = pv.width = W * S; o.height = pv.height = H * S;
-  const c = o.getContext('2d'), pc = pv.getContext('2d');
   // smooth boundaries: each hi-res pixel takes the label with most kernel weight among nearby source pixels
-  const F = S * SS, HW = W * F, HH = H * F, hl = new Uint8Array(HW * HH), wt = new Float32Array(k);
+  const F = S * SS, HW = W * F, HH = H * F, hl = new Uint8Array(HW * HH), wt = new Float32Array(kk);
   const cl = (v, m) => Math.min(m - 1, Math.max(0, v));
-  for (let Y = 0; Y < HH; Y++) for (let X = 0; X < HW; X++) {
+  for (let Y = 0; Y < HH; Y++) { if (!(Y & 31)) await yf('draw', 0, .8)(Y / HH);
+   for (let X = 0; X < HW; X++) {
     const fx = (X + .5) / F - .5, fy = (Y + .5) / F - .5, x0 = Math.floor(fx), y0 = Math.floor(fy);
     const l0 = lab[cl(y0, H) * W + cl(x0, W)];
     let same = true;
@@ -287,11 +433,17 @@ function go() {
     for (let sy = y0 - 1; sy <= y0 + 2; sy++) for (let sx = x0 - 1; sx <= x0 + 2; sx++)
       wt[lab[cl(sy, H) * W + cl(sx, W)]] = 0;
     hl[Y * HW + X] = best;
-  }
+  } }
   const mk = () => { const q = document.createElement('canvas'); q.width = HW; q.height = HH; return q; };
   const pb = mk(), ob = mk(), po = pb.getContext('2d').createImageData(HW, HH), oo = ob.getContext('2d').createImageData(HW, HH);
-  for (let i = 0; i < hl.length; i++) po.data.set([...cen[hl[i]], 255], i*4);
+  const col = cen.map(q => (0xFF000000 | q[2] << 16 | q[1] << 8 | q[0]) >>> 0), pu = new Uint32Array(po.data.buffer);
+  for (let i = 0; i < hl.length; i++) pu[i] = col[hl[i]];
   pb.getContext('2d').putImageData(po, 0, 0);
+  await yf('draw', .8, 1)(1);
+  return () => {
+  const o = $('outline'), pv = $('preview');
+  o.width = pv.width = W * S; o.height = pv.height = H * S;
+  const c = o.getContext('2d'), pc = pv.getContext('2d');
   pc.imageSmoothingEnabled = true; pc.imageSmoothingQuality = 'high'; pc.drawImage(pb, 0, 0, W * S, H * S);
   // outline only: re-runnable so line darkness changes don't redo k-means
   const u = new Uint32Array(oo.data.buffer);
@@ -304,7 +456,7 @@ function go() {
     c.fillStyle = '#000'; c.font = 'bold 11px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
     list.forEach(px => {
       let b = px[0]; for (const p of px) if (d[p] > d[b]) b = p;
-      if (d[b] >= 5) c.fillText(num.get(lab[b]), (b % W + .5) * S, ((b / W | 0) + .5) * S);
+      if (d[b] >= 5 && lab[b] !== BG) c.fillText(num.get(lab[b]), (b % W + .5) * S, ((b / W | 0) + .5) * S);
     });
     $('pOut').src = o.toDataURL();
     if (vw.open) paintViewer();
@@ -325,6 +477,7 @@ function go() {
   });
   out = { outline: o, preview: pv, legend: lc };
   $('pLeg').src = lc.toDataURL(); redrawOutline();
+  };
 }
 
 $('dl').onclick = () => Object.entries(out).forEach(([n, cv], i) => setTimeout(() => {
@@ -335,6 +488,51 @@ $('dk').oninput = () => $('vdk').value = $('dv').textContent = $('vdv').textCont
 $('dk').onchange = () => redrawOutline && redrawOutline();
 $('vdk').oninput = () => { $('dk').value = $('vdk').value; $('dk').oninput(); };
 $('vdk').onchange = $('dk').onchange;
+
+// crop dialog: box kept as fractions of the photo, so it survives phone rotation
+const cw = $('cw'), cbox = $('cbox'), cwrap = $('cwrap'), cimg = $('cimg'), MINPX = 64, FULL = { x0: 0, y0: 0, x1: 1, y1: 1 };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+let cr, drag;
+const showBox = () => cbox.style.cssText = `left:${cr.x0*100}%;top:${cr.y0*100}%;width:${(cr.x1-cr.x0)*100}%;height:${(cr.y1-cr.y0)*100}%`;
+function editBox(h, dx, dy, r, mw, mh) {   // h: 'm' move, else the dragged corner like 'nw'
+  let { x0, y0, x1, y1 } = r;
+  if (h === 'm') { const w = x1 - x0, t = y1 - y0; x0 = clamp(x0 + dx, 0, 1 - w); y0 = clamp(y0 + dy, 0, 1 - t); x1 = x0 + w; y1 = y0 + t; }
+  else {
+    if (h.includes('w')) x0 = clamp(x0 + dx, 0, x1 - mw); else x1 = clamp(x1 + dx, x0 + mw, 1);
+    if (h.includes('n')) y0 = clamp(y0 + dy, 0, y1 - mh); else y1 = clamp(y1 + dy, y0 + mh, 1);
+  }
+  cr = { x0, y0, x1, y1 }; showBox();
+}
+const minFrac = () => { const b = cwrap.getBoundingClientRect(); return [Math.min(1, MINPX / b.width), Math.min(1, MINPX / b.height), b]; };
+$('cp').onclick = () => {
+  if (cimg.src !== pic.src) cimg.src = pic.src;
+  cr = { ...(crop || FULL) }; showBox(); cw.returnValue = ''; cw.showModal(); cbox.focus();
+};
+cwrap.onpointerdown = e => {
+  const h = e.target.dataset.c || (e.target === cbox ? 'm' : '');
+  if (!h) return;
+  e.preventDefault(); cwrap.setPointerCapture(e.pointerId); drag = { h, x: e.clientX, y: e.clientY, r: { ...cr } };
+};
+cwrap.onpointermove = e => {
+  if (!drag) return;
+  const [mw, mh, b] = minFrac();
+  editBox(drag.h, (e.clientX - drag.x) / b.width, (e.clientY - drag.y) / b.height, drag.r, mw, mh);
+};
+cwrap.onpointerup = cwrap.onpointercancel = () => drag = null;
+cbox.onkeydown = e => {
+  const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+  if (!d) return;
+  e.preventDefault(); const [mw, mh] = minFrac();
+  editBox(e.shiftKey ? 'se' : 'm', d[0] * .02, d[1] * .02, cr, mw, mh);
+};
+$('ca').onclick = () => cw.close('apply');
+$('cc').onclick = () => cw.close('');
+$('cr').onclick = () => cw.close('reset');
+cw.addEventListener('close', () => {
+  if (cw.returnValue !== 'apply' && cw.returnValue !== 'reset') return;
+  crop = cw.returnValue === 'reset' || (cr.x0 <= 0 && cr.y0 <= 0 && cr.x1 >= 1 && cr.y1 >= 1) ? null : cr;
+  requestAnimationFrame(() => setTimeout(() => render(false), 0));   // let the dialog close and paint first
+});
 
 // full-screen viewer (lightbox for tracing): controls auto-hide, taps on the image only reveal them
 const vw = $('vw'), vc = $('vc'), vbar = $('vbar');
@@ -365,7 +563,8 @@ vw.addEventListener('close', () => {
 });
 document.addEventListener('visibilitychange', () => vw.open && document.visibilityState === 'visible' && wake());
 $('vx').onclick = () => vw.close();
-$('vr').onclick = () => vw.classList.toggle('rot');
+let vRot = 0;   // quarter turns, kept for the page session
+$('vr').onclick = () => { vRot = (vRot + 1) % 4; vw.dataset.r = vRot; vw.style.setProperty('--a', vRot); };
 </script>
 </body>
 </html>
